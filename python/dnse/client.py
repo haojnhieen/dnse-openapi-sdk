@@ -1,25 +1,37 @@
 #!/usr/bin/env python3
 import json
 import os
-from urllib import parse, request
+from urllib import parse
+import urllib3
+
 
 from .common import build_signature, get_date_header_name
 
 
 class DNSEClient:
     def __init__(
-        self,
-        api_key,
-        api_secret,
-        base_url="https://openapi.dnse.com.vn",
-        algorithm="hmac-sha256",
-        hmac_nonce_enabled=True,
+            self,
+            api_key,
+            api_secret,
+            base_url="https://openapi.dnse.com.vn",
+            algorithm="hmac-sha256",
+            hmac_nonce_enabled=True,
     ):
         self._api_key = api_key
         self._api_secret = api_secret
         self._base_url = base_url.rstrip("/")
         self._algorithm = algorithm
         self._hmac_nonce_enabled = hmac_nonce_enabled
+
+        # Tạo PoolManager 1 lần duy nhất, tái sử dụng suốt vòng đời object
+        self._http = urllib3.PoolManager(
+            num_pools=10,           # Số lượng connection pools
+            maxsize=10,             # Số connections tối đa mỗi pool
+            block=False,            # Không block khi pool đầy
+            timeout=urllib3.Timeout(connect=30.0, read=60.0),
+            # cert_reqs = 'CERT_NONE',  # Không yêu cầu certificate
+            # assert_hostname = False  # Không kiểm tra hostname
+        )
 
     def get_accounts(self, dry_run=False):
         return self._request("GET", "/accounts", dry_run=dry_run)
@@ -42,6 +54,14 @@ class DNSEClient:
         return self._request(
             "GET",
             f"/accounts/{account_no}/deals",
+            query={"marketType": market_type},
+            dry_run=dry_run,
+        )
+
+    def get_position_by_id(self, market_type, position_id, dry_run=False):
+        return self._request(
+            "GET",
+            f"/accounts/positions/{position_id}",
             query={"marketType": market_type},
             dry_run=dry_run,
         )
@@ -69,14 +89,14 @@ class DNSEClient:
         )
 
     def get_order_history(
-        self,
-        account_no,
-        market_type,
-        from_date=None,
-        to_date=None,
-        page_size=None,
-        page_index=None,
-        dry_run=False,
+            self,
+            account_no,
+            market_type,
+            from_date=None,
+            to_date=None,
+            page_size=None,
+            page_index=None,
+            dry_run=False,
     ):
         query = {"marketType": market_type}
         if from_date:
@@ -125,6 +145,59 @@ class DNSEClient:
             "GET",
             "/price/ohlc",
             query=request_query,
+            dry_run=dry_run,
+        )
+
+    def get_trades(self, symbol, board_id=None, from_date=None, to_date=None, limit=None, order = None, next_page_token=None, dry_run=False):
+        query = {}
+        if board_id is not None:
+            query["boardId"] = board_id
+        if from_date is not None:
+            query["from"] = from_date
+        if to_date is not None:
+            query["to"] = to_date
+        if limit is not None:
+            query["limit"] = limit
+        if order is not None:
+            query["order"] = order
+        if next_page_token is not None:
+            query["nextPageToken"] = next_page_token
+        return self._request(
+            "GET",
+            f"/price/{symbol}/trades",
+            query=query if query else None,
+            dry_run=dry_run,
+        )
+
+    def get_instruments(self, symbol=None, market_id=None, security_group_id=None, index_name=None, limit=None, page=None, dry_run=False):
+        query = {}
+        if symbol is not None:
+            query["symbol"] = symbol
+        if market_id is not None:
+            query["marketId"] = market_id
+        if security_group_id is not None:
+            query["securityGroupId"] = security_group_id
+        if index_name is not None:
+            query["indexName"] = index_name
+        if limit is not None:
+            query["limit"] = limit
+        if page is not None:
+            query["page"] = page
+        return self._request(
+            "GET",
+            f"/instruments",
+            query=query if query else None,
+            dry_run=dry_run,
+        )
+
+    def get_latest_trade(self, symbol, board_id=None, dry_run=False):
+        query = {}
+        if board_id is not None:
+            query["boardId"] = board_id
+        return self._request(
+            "GET",
+            f"/price/{symbol}/trades/latest",
+            query=query if query else None,
             dry_run=dry_run,
         )
 
@@ -201,12 +274,12 @@ class DNSEClient:
             dry_run=dry_run,
         )
 
-    def close_deal(self, deal_id, account_no, market_type, payload, trading_token, dry_run=False):
+    def close_position(self, position_id, market_type, payload, trading_token, dry_run=False):
         headers = {"trading-token": trading_token}
         query = {"marketType": market_type}
         return self._request(
             "POST",
-            f"/accounts/{account_no}/deals/{deal_id}/close",
+            f"/accounts/positions/{position_id}/close",
             query=query,
             body=payload,
             headers=headers,
@@ -219,40 +292,49 @@ class DNSEClient:
         date_value, signature_header_value = self._signature_headers(method, path)
         date_header_name = get_date_header_name()
 
-        data = None
-        if body is not None:
-            data = json.dumps(body).encode("utf-8")
-
-        req = request.Request(url, data=data, method=method)
-        req.add_header(date_header_name, date_value)
-        req.add_header("X-Signature", signature_header_value)
-        req.add_header("x-api-key", self._api_key)
+        # Build headers dict
+        req_headers = {
+            date_header_name: date_value,
+            "X-Signature": signature_header_value,
+            "x-api-key": self._api_key,
+        }
 
         if body is not None:
-            req.add_header("Content-Type", "application/json")
+            req_headers["Content-Type"] = "application/json"
 
         if headers:
-            for key, value in headers.items():
-                req.add_header(key, value)
+            req_headers.update(headers)
+
+        # Prepare body data
+        data = None
+        if body is not None:
+            data = json.dumps(body)
 
         if debug or dry_run:
             prefix = "DRY RUN" if dry_run else "DEBUG"
             print(f"{prefix} url:", url)
             print(f"{prefix} method:", method)
             print(f"{prefix} query_params:", query or {})
-            print(f"{prefix} headers:", dict(req.header_items()))
+            print(f"{prefix} headers:", req_headers)
             print(f"{prefix} body:", body)
 
         if dry_run:
             return None, None
 
         try:
-            with request.urlopen(req) as resp:
-                body_text = resp.read().decode("utf-8")
-                return resp.status, body_text
-        except request.HTTPError as err:
-            body_text = err.read().decode("utf-8") if err.fp else ""
-            return err.code, body_text
+            resp = self._http.request(
+                method,
+                url,
+                body=data,
+                headers=req_headers,
+            )
+            body_text = resp.data.decode("utf-8")
+            return resp.status, body_text
+        except urllib3.exceptions.HTTPError as err:
+            if hasattr(err, 'response') and err.response:
+                body_text = err.response.data.decode("utf-8") if err.response.data else ""
+                return err.response.status, body_text
+            raise
 
     def _build_url(self, path, query):
         url = f"{self._base_url}{path}"

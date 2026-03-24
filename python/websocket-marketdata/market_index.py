@@ -1,16 +1,16 @@
 """
-Market data subscription example.
+Market index subscription example.
 
 Demonstrates:
-- Subscribing to security definition updates
+- Subscribing to market index
 
-This example shows how to receive real-time market data for multiple symbols.
+This example shows how to receive real-time market index
 """
 
 import asyncio
 
 from trading_websocket import TradingClient
-from trading_websocket.models import SecurityDefinition
+from trading_websocket.models import MarketIndex
 
 
 async def main():
@@ -23,18 +23,18 @@ async def main():
         encoding=encoding,
     )
 
-    def handle_security_definition(sec_def: SecurityDefinition):
-        print(f"SECURITY DEFINITION: {sec_def}")
+    def handle_market_index(data: MarketIndex):
+        print(f"Market index: {data}")
 
     # Connect to gateway
     print("Connecting to WebSocket gateway...")
     await client.connect()
     print(f"Connected! Session ID: {client._session_id}\n")
 
-    print("Subscribing to security definition for SSI and 41I1G2000...")
-    await client.subscribe_sec_def(["SSI", "41I1G2000"], on_sec_def=handle_security_definition, encoding=encoding, board_id="G1")
+    print("Subscribing to market index...")
+    await client.subscribe_market_index(market_index='HNX', on_market_index=handle_market_index, encoding=encoding)
 
-    print("\nReceiving market data (will run for 1 hour)...\n")
+    print("\nReceiving market index (will run for 1 hour)...\n")
 
     # Run for 1H to collect data
     # In a real application, you might run indefinitely or until a specific condition

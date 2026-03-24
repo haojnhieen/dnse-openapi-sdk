@@ -30,7 +30,7 @@ async def main():
     print(f"Connected! Session ID: {client._session_id}\n")
 
     print("Subscribing to quotes for SSI and 41I1G2000...")
-    await client.subscribe_quotes(["SSI", "41I1G2000"], on_quote=handle_quote, encoding=encoding)
+    await client.subscribe_quotes(["SSI", "41I1G2000"], on_quote=handle_quote, encoding=encoding, board_id="G1")
 
     print("\nReceiving market data (will run for 1 hour)...\n")
 

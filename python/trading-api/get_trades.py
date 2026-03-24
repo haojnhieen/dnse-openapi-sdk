@@ -14,15 +14,7 @@ def main():
         base_url="https://openapi.dnse.com.vn",
     )
 
-    payload = {}
-
-    status, body = client.close_position(
-        position_id="replace-with-position-id",
-        market_type="DERIVATIVE",
-        payload=payload,
-        trading_token="replace-with-trading-token",
-        dry_run=False,
-    )
+    status, body = client.get_trades(symbol="GAS", board_id="G1", from_date=1773282637, to_date=1773289837, limit = 100, order = "DESC", next_page_token=None, dry_run=False)
     print(status, body)
 
 

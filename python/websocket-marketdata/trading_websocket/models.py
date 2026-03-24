@@ -8,9 +8,34 @@ All models support parsing from both abbreviated (MessagePack) and full (JSON) f
 """
 
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Any, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Optional, List, Dict, Any, Tuple
+
+
+def parse_timestamp(v: Any) -> Optional[float]:
+    if v is None:
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, dict):
+        seconds = v.get("Seconds", v.get("seconds", 0))
+        nanos = v.get("Nanos", v.get("nanos", 0))
+        return float(seconds) + float(nanos) * 1e-9
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def proto_timestamp_to_str(v: Any) -> str:
+    if isinstance(v, dict):
+        seconds = v.get("Seconds", v.get("seconds", 0))
+        nanos = v.get("Nanos", v.get("nanos", 0))
+        dt = datetime.fromtimestamp(seconds + nanos / 1_000_000_000, tz=timezone.utc)
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        return None
 
 
 @dataclass
@@ -21,8 +46,8 @@ class PriceLevel:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "PriceLevel":
         return cls(
-            price=data.get("p") or data.get("Price"),
-            quantity=data.get("q") or data.get("Qtty")
+            price=data.get("Price") or data.get("price"),
+            quantity=data.get("qtty") or data.get("Qtty")
         )
 
 
@@ -44,18 +69,18 @@ class Trade:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Trade":
         return cls(
-            marketId=data.get("market_id", 0) or data.get("mi", 0),
-            boardId=data.get("board_id", 0) or data.get("bi", 0),
-            isin=data.get("isin", 0) or data.get("is", 0),
-            symbol=data.get("s") or data.get("symbol"),
-            price=data.get("p", 0.0) or data.get("match_price", 0.0),
-            quantity=data.get("q", 0) or data.get("match_qtty", 0),
-            totalVolumeTraded=data.get("tvt", 0) or data.get("total_volume_traded", 0),
-            grossTradeAmount=data.get("gta", 0) or data.get("gross_trade_amount", 0),
-            highestPrice=data.get("hp", 0) or data.get("highest_price", 0),
-            lowestPrice=data.get("lp", 0) or data.get("lowest_price", 0),
-            openPrice=data.get("op", 0) or data.get("open_price", 0),
-            tradingSessionId=data.get("tsi", 0) or data.get("trading_session_id", 0),
+            marketId=data.get("market_id", 0) or data.get("MarketId", 0),
+            boardId=data.get("board_id", 0) or data.get("BoardId", 0),
+            isin=data.get("isin", "") or data.get("Isin", ""),
+            symbol=data.get("Symbol") or data.get("symbol"),
+            price=data.get("MatchPrice", 0.0) or data.get("match_price", 0.0),
+            quantity=data.get("MatchQtty", 0) or data.get("match_qtty", 0),
+            totalVolumeTraded=data.get("TotalVolumeTraded", 0) or data.get("total_volume_traded", 0),
+            grossTradeAmount=data.get("GrossTradeAmount", 0) or data.get("gross_trade_amount", 0),
+            highestPrice=data.get("HighestPrice", 0) or data.get("highest_price", 0),
+            lowestPrice=data.get("LowestPrice", 0) or data.get("lowest_price", 0),
+            openPrice=data.get("OpenPrice", 0) or data.get("open_price", 0),
+            tradingSessionId=data.get("TradingSessionId", 0) or data.get("trading_session_id", 0),
         )
 
 
@@ -79,20 +104,107 @@ class TradeExtra:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TradeExtra":
         return cls(
-            marketId=data.get("market_id", 0) or data.get("mi", 0),
-            boardId=data.get("board_id", 0) or data.get("bi", 0),
-            isin=data.get("isin", 0) or data.get("is", 0),
-            symbol=data.get("s") or data.get("symbol"),
-            price=data.get("p", 0.0) or data.get("match_price", 0.0),
-            quantity=data.get("q", 0) or data.get("match_qtty", 0),
-            side=data.get("si", 0) or data.get("side", 0),
-            avgPrice=data.get("ap", 0) or data.get("avg_price", 0),
-            totalVolumeTraded=data.get("tvt", 0) or data.get("total_volume_traded", 0),
-            grossTradeAmount=data.get("gta", 0) or data.get("gross_trade_amount", 0),
-            highestPrice=data.get("hp", 0) or data.get("highest_price", 0),
-            lowestPrice=data.get("lp", 0) or data.get("lowest_price", 0),
-            openPrice=data.get("op", 0) or data.get("open_price", 0),
-            tradingSessionId=data.get("tsi", 0) or data.get("trading_session_id", 0),
+            marketId=data.get("market_id", 0) or data.get("MarketId", 0),
+            boardId=data.get("board_id", 0) or data.get("BoardId", 0),
+            isin=data.get("isin", "") or data.get("Isin", ""),
+            symbol=data.get("Symbol") or data.get("symbol"),
+            price=data.get("MatchPrice", 0.0) or data.get("match_price", 0.0),
+            quantity=data.get("MatchQtty", 0) or data.get("match_qtty", 0),
+            side=data.get("Side", 0) or data.get("side", 0),
+            avgPrice=data.get("AvgPrice", 0) or data.get("avg_price", 0),
+            totalVolumeTraded=data.get("TotalVolumeTraded", 0) or data.get("total_volume_traded", 0),
+            grossTradeAmount=data.get("GrossTradeAmount", 0) or data.get("gross_trade_amount", 0),
+            highestPrice=data.get("HighestPrice", 0) or data.get("highest_price", 0),
+            lowestPrice=data.get("LowestPrice", 0) or data.get("lowest_price", 0),
+            openPrice=data.get("OpenPrice", 0) or data.get("open_price", 0),
+            tradingSessionId=data.get("TradingSessionId", 0) or data.get("trading_session_id", 0),
+        )
+
+
+@dataclass
+class MarketIndex:
+    index_name: str
+    changed_ratio: float
+    changed_value: float
+
+    fluctuation_steadiness_issue_count: int
+    fluctuation_down_issue_count: int
+    fluctuation_up_issue_count: int
+    fluctuation_lower_limit_issue_count: int
+    fluctuation_upper_limit_issue_count: int
+
+    fluctuation_down_issue_volume: int
+    fluctuation_up_issue_volume: int
+    fluctuation_steadiness_issue_volume: int
+
+    currency_code: str
+    index_type_code: str
+
+    lowest_value_indexes: float
+    highest_value_indexes: float
+    prior_value_indexes: float
+    value_indexes: float
+
+    contauct_acc_trd_val: float
+    contauct_acc_trd_vol: int
+    blk_trd_acc_trd_val: float
+    blk_trd_acc_trd_vol: int
+
+    gross_trade_amount: float
+    total_volume_traded: int
+
+    market_index_class: int
+    market_id: int
+    trading_session_id: int
+
+    transact_time: str
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "MarketIndex":
+        return cls(
+            index_name=data.get("IndexName") or data.get("index_name"),
+            changed_ratio=data.get("ChangedRatio") or data.get("changed_ratio"),
+            changed_value=data.get("ChangedValue") or data.get("changed_value"),
+
+            fluctuation_steadiness_issue_count=data.get("FluctuationSteadinessIssueCount") or data.get(
+                "fluctuation_steadiness_issue_count"),
+            fluctuation_down_issue_count=data.get("FluctuationDownIssueCount") or data.get(
+                "fluctuation_down_issue_count"),
+            fluctuation_up_issue_count=data.get("FluctuationUpIssueCount") or data.get(
+                "fluctuation_up_issue_count"),
+            fluctuation_lower_limit_issue_count=data.get("FluctuationLowerLimitIssueCount") or data.get(
+                "fluctuation_lower_limit_issue_count"),
+            fluctuation_upper_limit_issue_count=data.get("FluctuationUpperLimitIssueCount") or data.get(
+                "fluctuation_upper_limit_issue_count"),
+
+            fluctuation_down_issue_volume=data.get("FluctuationDownIssueVolume") or data.get(
+                "fluctuation_down_issue_volume"),
+            fluctuation_up_issue_volume=data.get("FluctuationUpIssueVolume") or data.get(
+                "fluctuation_up_issue_volume"),
+            fluctuation_steadiness_issue_volume=data.get("FluctuationSteadinessIssueVolume") or data.get(
+                "fluctuation_steadiness_issue_volume"),
+
+            currency_code=data.get("CurrencyCode") or data.get("currency_code"),
+            index_type_code=data.get("IndexTypeCode") or data.get("index_type_code"),
+
+            lowest_value_indexes=data.get("LowestValueIndexes") or data.get("lowest_value_indexes"),
+            highest_value_indexes=data.get("HighestValueIndexes") or data.get("highest_value_indexes"),
+            prior_value_indexes=data.get("PriorValueIndexes") or data.get("prior_value_indexes"),
+            value_indexes=data.get("ValueIndexes") or data.get("value_indexes"),
+
+            contauct_acc_trd_val=data.get("ContauctAccTrdVal") or data.get("contauct_acc_trd_val"),
+            contauct_acc_trd_vol=data.get("ContauctAccTrdVol") or data.get("contauct_acc_trd_vol"),
+            blk_trd_acc_trd_val=data.get("BlkTrdAccTrdVal") or data.get("blk_trd_acc_trd_val"),
+            blk_trd_acc_trd_vol=data.get("BlkTrdAccTrdVol") or data.get("blk_trd_acc_trd_vol"),
+
+            gross_trade_amount=data.get("GrossTradeAmount") or data.get("gross_trade_amount"),
+            total_volume_traded=data.get("TotalVolumeTraded") or data.get("total_volume_traded"),
+
+            market_index_class=data.get("MarketIndexClass") or data.get("market_index_class"),
+            market_id=data.get("MarketId") or data.get("market_id"),
+            trading_session_id=data.get("TradingSessionId") or data.get("trading_session_id"),
+
+            transact_time=proto_timestamp_to_str(data.get("TransactTime") or data.get("transact_time")),
         )
 
 
@@ -109,13 +221,13 @@ class ExpectedPrice:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ExpectedPrice":
         return cls(
-            marketId=data.get("market_id", 0) or data.get("mi", 0),
-            boardId=data.get("board_id", 0) or data.get("bi", 0),
-            isin=data.get("isin", 0) or data.get("is", 0),
-            symbol=data.get("s") or data.get("symbol"),
-            closePrice=data.get("close_price", 0.0) or data.get("cp", 0),
-            expectedTradePrice=data.get("expected_trade_price", 0.0) or data.get("etp", 0.0),
-            expectedTradeQuantity=data.get("expected_trade_quantity", 0) or data.get("etq", 0)
+            marketId=data.get("market_id", 0) or data.get("MarketId", 0),
+            boardId=data.get("board_id", 0) or data.get("BoardId", 0),
+            isin=data.get("isin", "") or data.get("Isin", ""),
+            symbol=data.get("Symbol") or data.get("symbol"),
+            closePrice=data.get("close_price", 0.0) or data.get("ClosePrice", 0),
+            expectedTradePrice=data.get("expected_trade_price", 0.0) or data.get("ExpectedTradePrice", 0.0),
+            expectedTradeQuantity=data.get("expected_trade_quantity", 0) or data.get("ExpectedTradeQuantity", 0)
         )
 
 
@@ -139,20 +251,22 @@ class SecurityDefinition:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SecurityDefinition":
         return cls(
-            symbol=data.get("symbol") or data.get("s"),
-            marketId=data.get("market_id", 0) or data.get("mi", 0),
-            boardId=data.get("board_id", 0) or data.get("bi", 0),
-            isin=data.get("isin", 0) or data.get("is", 0),
-            productGrpId=data.get("product_grp_id", 0) or data.get("pgi", 0),
-            securityGroupId=data.get("security_group_id", 0) or data.get("sgi", 0),
-            basicPrice=data.get("basic_price", 0.0) or data.get("bp", 0.0),
-            ceilingPrice=data.get("ceiling_price", 0.0) or data.get("cep", 0.0),
-            floorPrice=data.get("floor_price", 0.0) or data.get("fp", 0.0),
-            openInterestQuantity=data.get("open_interest_quantity", 0) or data.get("oiq", 0),
-            securityStatus=data.get("security_status", 0) or data.get("ss", 0),
-            symbolAdminStatusCode=data.get("symbol_admin_status_code", 0) or data.get("sasc", 0),
-            symbolTradingMethodStatusCode=data.get("symbol_trading_method_status_code", 0) or data.get("stmsc", 0),
-            symbolTradingSanctionStatusCode=data.get("symbol_trading_sanction_status_code", 0) or data.get("stssc", 0)
+            symbol=data.get("symbol") or data.get("Symbol"),
+            marketId=data.get("market_id", 0) or data.get("MarketId", 0),
+            boardId=data.get("board_id", 0) or data.get("BoardId", 0),
+            isin=data.get("isin", "") or data.get("Isin", ""),
+            productGrpId=data.get("product_grp_id", 0) or data.get("ProductGrpId", 0),
+            securityGroupId=data.get("security_group_id", 0) or data.get("SecurityGroupId", 0),
+            basicPrice=data.get("basic_price", 0.0) or data.get("BasicPrice", 0.0),
+            ceilingPrice=data.get("ceiling_price", 0.0) or data.get("CeilingPrice", 0.0),
+            floorPrice=data.get("floor_price", 0.0) or data.get("FloorPrice", 0.0),
+            openInterestQuantity=data.get("open_interest_quantity", 0) or data.get("OpenInterestQuantity", 0),
+            securityStatus=data.get("security_status", 0) or data.get("SecurityStatus", 0),
+            symbolAdminStatusCode=data.get("symbol_admin_status_code", 0) or data.get("SymbolAdminStatusCode", 0),
+            symbolTradingMethodStatusCode=data.get("symbol_trading_method_status_code", 0) or data.get(
+                "SymbolTradingMethodStatusCode", 0),
+            symbolTradingSanctionStatusCode=data.get("symbol_trading_sanction_status_code", 0) or data.get(
+                "SymbolTradingSanctionStatusCode", 0)
         )
 
 
@@ -170,22 +284,22 @@ class Quote:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Quote":
         # Parse bids array
-        bids_data = data.get("b") or data.get("bid") or []
+        bids_data = data.get("Bid") or data.get("bid") or []
         bids = [PriceLevel.from_dict(level) for level in bids_data]
 
         # Parse asks array
-        offer_data = data.get("of") or data.get("offer") or []
+        offer_data = data.get("Offer") or data.get("offer") or []
         offers = [PriceLevel.from_dict(level) for level in offer_data]
 
         return cls(
-            symbol=data.get("s") or data.get("symbol"),
-            marketId=data.get("market_id", 0) or data.get("mi", 0),
-            boardId=data.get("board_id", 0) or data.get("bi", 0),
-            isin=data.get("isin", 0) or data.get("is", 0),
+            symbol=data.get("Symbol") or data.get("symbol"),
+            marketId=data.get("market_id", 0) or data.get("MarketId", 0),
+            boardId=data.get("board_id", 0) or data.get("BoardId", 0),
+            isin=data.get("isin", "") or data.get("Isin", ""),
             bid=bids,
             offer=offers,
-            totalOfferQtty=data.get("total_offer_qtty") or data.get("toq"),
-            totalBidQtty=data.get("total_bid_qtty") or data.get("tbq")
+            totalOfferQtty=data.get("total_offer_qtty") or data.get("TotalOfferQtty"),
+            totalBidQtty=data.get("total_bid_qtty") or data.get("TotalBidQtty"),
         )
 
     @property
@@ -225,16 +339,16 @@ class Ohlc:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Ohlc":
         return cls(
-            symbol=data.get("s") or data.get("symbol"),
-            resolution=data.get("r") or data.get("resolution"),
-            open=data.get("o") or data.get("open"),
-            high=data.get("h") or data.get("high"),
-            low=data.get("l") or data.get("low"),
-            close=data.get("c") or data.get("close"),
-            volume=data.get("v") or data.get("volume"),
-            time=data.get("t") or data.get("time"),
-            type=data.get("ty") or data.get("type"),
-            lastUpdated=data.get("lu") or data.get("lastUpdated")
+            symbol=data.get("symbol") or data.get("Symbol"),
+            resolution=data.get("resolution") or data.get("Resolution"),
+            open=data.get("open") or data.get("Open"),
+            high=data.get("high") or data.get("High"),
+            low=data.get("low") or data.get("Low"),
+            close=data.get("close") or data.get("Close"),
+            volume=data.get("volume") or data.get("Volume"),
+            time=data.get("time") or data.get("Time"),
+            type=data.get("type") or data.get("Type"),
+            lastUpdated=data.get("lastUpdated") or data.get("LastUpdated")
         )
 
 

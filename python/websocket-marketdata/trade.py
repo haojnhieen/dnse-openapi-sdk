@@ -32,7 +32,7 @@ async def main():
     print(f"Connected! Session ID: {client._session_id}\n")
 
     print("Subscribing to trades for SSI and 41I1G2000...")
-    await client.subscribe_trades(["SSI", "41I1G2000"], on_trade=handle_trade, encoding=encoding)
+    await client.subscribe_trades(["SSI", "41I1G2000"], on_trade=handle_trade, encoding=encoding, board_id="G1")
 
     print("\nReceiving market data (will run for 1 hour)...\n")
 

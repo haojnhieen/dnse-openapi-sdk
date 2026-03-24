@@ -33,7 +33,7 @@ async def main():
 
     print("Subscribing to expected price for SSI and 41I1G2000...")
     await client.subscribe_expected_price(["SSI", "41I1G2000"],
-                                          on_expected_price=handle_expected_price, encoding=encoding)
+                                          on_expected_price=handle_expected_price, encoding=encoding, board_id="G1")
 
     print("\nReceiving market data (will run for 1 hour)...\n")
 

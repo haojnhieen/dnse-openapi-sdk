@@ -2,6 +2,8 @@ import asyncio
 import logging
 import ssl
 from typing import Optional, AsyncIterator
+
+import certifi
 import websockets
 from websockets.client import WebSocketClientProtocol
 from .exceptions import ConnectionError, ConnectionClosed
@@ -64,9 +66,9 @@ class WebSocketConnection:
         while self._retry_count < self.max_retries:
             try:
                 logger.info(f"Connecting to {self.url} (attempt {self._retry_count + 1}/{self.max_retries})")
-                ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
+                ssl_context = ssl.create_default_context(cafile=certifi.where())
+                # ssl_context.check_hostname = False
+                # ssl_context.verify_mode = ssl.CERT_NONE
                 self._ws = await asyncio.wait_for(
                     websockets.connect(self.url,
                                        ssl=ssl_context,

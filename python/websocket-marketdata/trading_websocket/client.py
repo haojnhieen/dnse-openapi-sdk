@@ -17,7 +17,8 @@ import time
 from .connection import WebSocketConnection
 from .auth import AuthManager
 from .encoding import MessageEncoder, MessageDecoder
-from .models import Trade, Quote, Ohlc, Order, Position, AccountUpdate, ExpectedPrice, SecurityDefinition, TradeExtra
+from .models import Trade, Quote, Ohlc, Order, Position, AccountUpdate, ExpectedPrice, SecurityDefinition, TradeExtra, \
+    MarketIndex
 from .exceptions import (
     AuthenticationError,
     ConnectionError,
@@ -53,7 +54,7 @@ class TradingClient:
             self,
             api_key: str,
             api_secret: str,
-            base_url: str = "wss://ws-openapi-uat.dnse.com.vn",
+            base_url: str = "wss://ws-openapi.dnse.com.vn",
             encoding: str = "json",  # or "json"
             auto_reconnect: bool = True,
             max_retries: int = 10,
@@ -175,57 +176,83 @@ class TradingClient:
             raise AuthenticationError(f"Unexpected response: {action}")
 
     async def subscribe_trades(
-            self, symbols: List[str], on_trade: Optional[Callable[[Trade], None]] = None, encoding="json"
+            self, symbols: List[str], on_trade: Optional[Callable[[Trade], None]] = None, encoding="json", board_id=None
     ) -> None:
-        channel = "tick.G1.json"
-        if encoding == "msgpack":
-            channel = "tick.G1.msgpack"
-        await self._subscribe_channel(channel, symbols)
+        boards = [board_id] if board_id is not None else ["G1", "G2", "G3", "G4", "G5", "G6", "G7"]
+
+        for board in boards:
+            channel = f"tick.{board}.json"
+            if encoding == "msgpack":
+                channel = f"tick.{board}.msgpack"
+            await self._subscribe_channel(channel, symbols)
 
         if on_trade:
             self.on("trade", on_trade)
 
     async def subscribe_trade_extra(
-            self, symbols: List[str], on_trade_extra: Optional[Callable[[TradeExtra], None]] = None, encoding="json"
+            self, symbols: List[str], on_trade_extra: Optional[Callable[[TradeExtra], None]] = None, encoding="json", board_id=None
     ) -> None:
-        channel = "tick_extra.G1.json"
-        if encoding == "msgpack":
-            channel = "tick_extra.G1.msgpack"
-        await self._subscribe_channel(channel, symbols)
+        boards = [board_id] if board_id is not None else ["G1", "G2", "G3", "G4", "G5", "G6", "G7"]
+
+        for board in boards:
+            channel = f"tick_extra.{board}.json"
+            if encoding == "msgpack":
+                channel = f"tick_extra.{board}.msgpack"
+            await self._subscribe_channel(channel, symbols)
 
         if on_trade_extra:
             self.on("trade_extra", on_trade_extra)
 
     async def subscribe_expected_price(
             self, symbols: List[str], on_expected_price: Optional[Callable[[ExpectedPrice], None]] = None,
-            encoding="json"
+            encoding="json", board_id=None
     ) -> None:
-        channel = "expected_price.G1.json"
-        if encoding == "msgpack":
-            channel = "expected_price.G1.msgpack"
-        await self._subscribe_channel(channel, symbols)
+        boards = [board_id] if board_id is not None else ["G1", "G2", "G3", "G4", "G5", "G6", "G7"]
+
+        for board in boards:
+            channel = f"expected_price.{board}.json"
+            if encoding == "msgpack":
+                channel = f"expected_price.{board}.msgpack"
+            await self._subscribe_channel(channel, symbols)
 
         if on_expected_price:
             self.on("expected_price", on_expected_price)
 
     async def subscribe_sec_def(
-            self, symbols: List[str], on_sec_def: Optional[Callable[[SecurityDefinition], None]] = None, encoding="json"
+            self, symbols: List[str], on_sec_def: Optional[Callable[[SecurityDefinition], None]] = None, encoding="json", board_id=None
     ) -> None:
-        channel = "security_definition.G1.json"
-        if encoding == "msgpack":
-            channel = "security_definition.G1.msgpack"
-        await self._subscribe_channel(channel, symbols)
+        boards = [board_id] if board_id is not None else ["G1", "G2", "G3", "G4", "G5", "G6", "G7"]
+
+        for board in boards:
+            channel = f"security_definition.{board}.json"
+            if encoding == "msgpack":
+                channel = f"security_definition.{board}.msgpack"
+            await self._subscribe_channel(channel, symbols)
 
         if on_sec_def:
             self.on("security_definition", on_sec_def)
 
-    async def subscribe_quotes(
-            self, symbols: List[str], on_quote: Optional[Callable[[Quote], None]] = None, encoding="json"
+    async def subscribe_market_index(
+            self, market_index: str, on_market_index: Optional[Callable[[MarketIndex], None]] = None, encoding="json"
     ) -> None:
-        channel = "top_price.G1.json"
+        channel = f"market_index.{market_index}.json"
         if encoding == "msgpack":
-            channel = "top_price.G1.msgpack"
-        await self._subscribe_channel(channel, symbols)
+            channel = f"market_index.{market_index}.msgpack"
+        await self._subscribe_channel(channel, [])
+
+        if on_market_index:
+            self.on("market_index", on_market_index)
+
+    async def subscribe_quotes(
+            self, symbols: List[str], on_quote: Optional[Callable[[Quote], None]] = None, encoding="json", board_id=None
+    ) -> None:
+        boards = [board_id] if board_id is not None else ["G1", "G2", "G3", "G4", "G5", "G6", "G7"]
+
+        for board in boards:
+            channel = f"top_price.{board}.json"
+            if encoding == "msgpack":
+                channel = f"top_price.{board}.msgpack"
+            await self._subscribe_channel(channel, symbols)
 
         if on_quote:
             self.on("quote", on_quote)
@@ -500,6 +527,10 @@ class TradingClient:
         elif msg_type == "p":  # Position
             position = Position.from_dict(data)
             self._emit("position", position)
+            await self._message_queue.put(position)
+        elif msg_type == "mi":  # Position
+            position = MarketIndex.from_dict(data)
+            self._emit("market_index", position)
             await self._message_queue.put(position)
         elif msg_type == "a":  # Account
             account = AccountUpdate.from_dict(data)
