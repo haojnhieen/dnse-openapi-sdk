@@ -1,4 +1,4 @@
-module github.com/manh-cam-studio/dnse-openapi-sdk/go
+module github.com/haojnhieen/dnse-openapi-sdk/go
 
 go 1.21
 

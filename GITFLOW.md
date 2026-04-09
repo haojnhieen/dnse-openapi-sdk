@@ -36,7 +36,7 @@ Khi phát hành một phiên bản mới, ta sẽ tách biệt vòng đời Vers
 
 ### Đối với Go SDK
 - Tag bắt buộc theo chuẩn: **`go/vX.Y.Z`** (VD: `go/v0.1.0`).
-- Nhờ có prefix `go/` này, khi người dùng chạy `go get github.com/manh-cam-studio/dnse-openapi-sdk/go@v0.1.0`, Go Registry sẽ hiểu và kéo mã nguồn chính xác trị trí bên trong cấu trúc monorepo của chúng ta.
+- Nhờ có prefix `go/` này, khi người dùng chạy `go get github.com/haojnhieen/dnse-openapi-sdk/go@v0.1.0`, Go Registry sẽ hiểu và kéo mã nguồn chính xác trị trí bên trong cấu trúc monorepo của chúng ta.
 
 ### Đối với Rust SDK
 - Tag theo chuẩn: **`rust/vX.Y.Z`** hoặc chung repo là **`vX.Y.Z`**.

@@ -6,14 +6,14 @@ import (
 	"log"
 	"time"
 
-	"github.com/manh-cam-studio/dnse-openapi-sdk/go/dnse"
-	"github.com/manh-cam-studio/dnse-openapi-sdk/go/websocket"
+	"github.com/haojnhieen/dnse-openapi-sdk/go/dnse"
+	"github.com/haojnhieen/dnse-openapi-sdk/go/websocket"
 )
 
 func main() {
 	// 1. REST Client Example
 	client := dnse.NewClient("your-api-key", "your-api-secret")
-	
+
 	status, body, err := client.GetAccounts(true)
 	if err != nil {
 		log.Fatalf("GetAccounts Error: %v", err)
@@ -26,10 +26,9 @@ func main() {
 	}
 	fmt.Printf("REST GetOHLC Dry Run - Status: %d, Body Length: %d\n", status, len(body))
 
-
 	// 2. WebSocket Client Example
 	wsClient := websocket.NewTradingClient("your-api-key", "your-api-secret")
-	
+
 	wsClient.OnTrade = func(t websocket.Trade) {
 		fmt.Printf("Trade event on %s: %f\n", t.Symbol, t.Price)
 	}
