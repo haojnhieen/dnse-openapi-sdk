@@ -105,6 +105,37 @@ impl TradingClient {
         Ok(())
     }
 
+    pub async fn subscribe_expected_price(&self, symbols: Vec<String>, board_id: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+        let boards = match board_id {
+            Some(b) => vec![b.to_string()],
+            None => vec!["G1", "G3", "G4", "G7", "T1", "T2", "T3", "T4", "T6"].into_iter().map(String::from).collect(),
+        };
+
+        for board in boards {
+            let channel = format!("expected_price.{}.{}", board, self.config.encoding);
+            self.subscribe_channel(&channel, symbols.clone()).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn subscribe_foreign_investor(&self, symbols: Vec<String>, board_id: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+        let boards = match board_id {
+            Some(b) => vec![b.to_string()],
+            None => vec!["G1", "G3", "G4", "G7", "T1", "T2", "T3", "T4", "T6"].into_iter().map(String::from).collect(),
+        };
+
+        for board in boards {
+            let channel = format!("foreign_investor.{}.{}", board, self.config.encoding);
+            self.subscribe_channel(&channel, symbols.clone()).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn subscribe_market_index(&self, market_index: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let channel = format!("market_index.{}.{}", market_index, self.config.encoding);
+        self.subscribe_channel(&channel, vec![]).await
+    }
+
     pub async fn subscribe_orders(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.subscribe_channel("orders", vec![]).await
     }

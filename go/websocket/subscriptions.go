@@ -48,6 +48,48 @@ func (c *TradingClient) SubscribeTrades(symbols []string, boardID string) error 
 	return nil
 }
 
+func (c *TradingClient) SubscribeTradeExtra(symbols []string, boardID string) error {
+	boards := defaultBoards
+	if boardID != "" {
+		boards = []string{boardID}
+	}
+	for _, board := range boards {
+		channel := fmt.Sprintf("tick_extra.%s.%s", board, c.config.Encoding)
+		if err := c.subscribeChannel(channel, symbols); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *TradingClient) SubscribeExpectedPrice(symbols []string, boardID string) error {
+	boards := defaultBoards
+	if boardID != "" {
+		boards = []string{boardID}
+	}
+	for _, board := range boards {
+		channel := fmt.Sprintf("expected_price.%s.%s", board, c.config.Encoding)
+		if err := c.subscribeChannel(channel, symbols); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *TradingClient) SubscribeForeignInvestor(symbols []string, boardID string) error {
+	boards := defaultBoards
+	if boardID != "" {
+		boards = []string{boardID}
+	}
+	for _, board := range boards {
+		channel := fmt.Sprintf("foreign_investor.%s.%s", board, c.config.Encoding)
+		if err := c.subscribeChannel(channel, symbols); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *TradingClient) SubscribeQuotes(symbols []string, boardID string) error {
 	boards := []string{"G1", "G2", "G3", "G4", "G5", "G6", "G7"}
 	if boardID != "" {
