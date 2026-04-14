@@ -218,7 +218,8 @@ class TradingClient:
             await self._subscribe_channel(channel, symbols)
 
         if on_trade:
-            self.on("trade", on_trade)
+            _handler = self._make_filtered_handler(board_id, "boardId", on_trade) if board_id is not None else on_trade
+            self.on("trade", _handler)
 
     async def subscribe_trade_extra(
             self, symbols: List[str], on_trade_extra: Optional[Callable[[TradeExtra], None]] = None, encoding="json",
@@ -233,7 +234,8 @@ class TradingClient:
             await self._subscribe_channel(channel, symbols)
 
         if on_trade_extra:
-            self.on("trade_extra", on_trade_extra)
+            _handler = self._make_filtered_handler(board_id, "boardId", on_trade_extra) if board_id is not None else on_trade_extra
+            self.on("trade_extra", _handler)
 
     async def subscribe_expected_price(
             self, symbols: List[str], on_expected_price: Optional[Callable[[ExpectedPrice], None]] = None,
@@ -248,7 +250,8 @@ class TradingClient:
             await self._subscribe_channel(channel, symbols)
 
         if on_expected_price:
-            self.on("expected_price", on_expected_price)
+            _handler = self._make_filtered_handler(board_id, "boardId", on_expected_price) if board_id is not None else on_expected_price
+            self.on("expected_price", _handler)
 
     async def subscribe_sec_def(
             self, symbols: List[str], on_sec_def: Optional[Callable[[SecurityDefinition], None]] = None,
@@ -263,7 +266,8 @@ class TradingClient:
             await self._subscribe_channel(channel, symbols)
 
         if on_sec_def:
-            self.on("security_definition", on_sec_def)
+            _handler = self._make_filtered_handler(board_id, "boardId", on_sec_def) if board_id is not None else on_sec_def
+            self.on("security_definition", _handler)
 
     async def subscribe_market_index(
             self, market_index: str, on_market_index: Optional[Callable[[MarketIndex], None]] = None, encoding="json"
@@ -288,7 +292,8 @@ class TradingClient:
             await self._subscribe_channel(channel, symbols)
 
         if on_quote:
-            self.on("quote", on_quote)
+            _handler = self._make_filtered_handler(board_id, "boardId", on_quote) if board_id is not None else on_quote
+            self.on("quote", _handler)
 
     async def subscribe_foreign_trading(
             self, symbols: List[str], board_id: str = "*",
@@ -413,6 +418,13 @@ class TradingClient:
                 del self._subscriptions[channel]
 
         logger.info(f"Unsubscribed from {channel}: {symbols}")
+
+    def _make_filtered_handler(self, board_id: Optional[str], attr: str, handler: Callable) -> Callable:
+        """Wrap handler to only fire when obj.{attr} == board_id."""
+        def _filtered(obj, _b=board_id, _a=attr, _cb=handler):
+            if getattr(obj, _a, None) == _b:
+                _cb(obj)
+        return _filtered
 
     def on(self, event: str, handler: Callable) -> None:
         if event not in self._event_handlers:

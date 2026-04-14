@@ -17,7 +17,7 @@ def main():
     payload = {
         "accountNo": "0001000115",
         "symbol": "HPG",
-        "side": "BUY",
+        "side": "NB",
         "orderType": "LO",
         "price": 25950,
         "quantity": 100,

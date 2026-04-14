@@ -223,6 +223,13 @@ class DNSEClient:
             dry_run=dry_run,
         )
 
+    def get_working_dates(self, dry_run=False):
+        return self._request(
+            "GET",
+            f"/market/working-dates",
+            dry_run=dry_run,
+        )
+
     def post_order(self, market_type, payload, trading_token, order_category="NORMAL", dry_run=False):
         headers = {"trading-token": trading_token}
         query = {"marketType": market_type}
