@@ -13,15 +13,26 @@ from decimal import Decimal
 from typing import Optional, List, Dict, Any, Tuple
 
 
-def parse_timestamp(v: Any):
+def parse_timestamp(v: Any, date_only: bool = False) -> Optional[str]:
+    """Parse various timestamp formats into string.
+
+    Supports:
+    - protobuf: {'Seconds': 1501718400, 'Nanos': 0}
+    - ISO string: '2017-08-03T00:00:00Z'
+    - Unix int/float: 1501718400
+    """
     try:
+        if v is None:
+            return None
+        fmt = "%Y-%m-%d" if date_only else "%Y-%m-%d %H:%M:%S"
         if isinstance(v, str):
-            return datetime.fromisoformat(v.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S")
+            return datetime.fromisoformat(v.replace("Z", "+00:00")).strftime(fmt)
         if isinstance(v, dict):
             seconds = v.get("Seconds", v.get("seconds", 0))
             nanos = v.get("Nanos", v.get("nanos", 0))
-            total_seconds = seconds + (nanos / 1e9)
-            return datetime.fromtimestamp(total_seconds).strftime('%Y-%m-%d %H:%M:%S')
+            return datetime.fromtimestamp(seconds + nanos / 1e9).strftime(fmt)
+        if isinstance(v, (int, float)):
+            return datetime.fromtimestamp(v).strftime(fmt)
     except Exception:
         return None
 
@@ -272,6 +283,8 @@ class SecurityDefinition:
     symbolAdminStatusCode: str
     symbolTradingMethodStatusCode: str
     symbolTradingSanctionStatusCode: str
+    finalTradeDate: Optional[str]
+    listingDate: Optional[str]
     receivedAt: Optional[float] = field(default=None, repr=False)
 
     @classmethod
@@ -291,6 +304,8 @@ class SecurityDefinition:
             symbolAdminStatusCode=data.get("symbolAdminStatusCode"),
             symbolTradingMethodStatusCode=data.get("symbolTradingMethodStatusCode"),
             symbolTradingSanctionStatusCode=data.get("symbolTradingSanctionStatusCode"),
+            finalTradeDate=parse_timestamp(data.get("finalTradeDate"), date_only=True),
+            listingDate=parse_timestamp(data.get("listingDate"), date_only=True),
             receivedAt=data.get("_receivedAt"),
         )
 
