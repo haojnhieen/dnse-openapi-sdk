@@ -28,7 +28,7 @@ and investment applications.
 #### Install from PyPI
 
 ```console
-pip install openapi-sdk 
+pip install openapi-sdk
 ```
 
 Upgrade:
