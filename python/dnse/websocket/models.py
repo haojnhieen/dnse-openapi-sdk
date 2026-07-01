@@ -574,6 +574,7 @@ class Session:
     eventId: str
     tradingSessionId: int
     tscProdGrpId: str
+    time: Optional[str] = None
     receivedAt: Optional[float] = field(default=None, repr=False)
 
     @classmethod
@@ -584,7 +585,8 @@ class Session:
             eventId=data.get("eventId", ""),
             tradingSessionId=data.get("tradingSessionId", 0),
             tscProdGrpId=data.get("tscProdGrpId", ""),
-            receivedAt=data.get("_receivedAt")
+            time=parse_timestamp(data.get("sendingTime")),
+            receivedAt=data.get("_receivedAt"),
         )
 
 
