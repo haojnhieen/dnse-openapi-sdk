@@ -10,21 +10,22 @@ This module provides the main TradingClient class that handles:
 - Graceful shutdown
 """
 
-from typing import Optional, Callable, List, Dict, Any
 import asyncio
 import logging
 import time
-from .connection import WebSocketConnection
+from typing import Optional, Callable, List, Dict, Any
+
 from .auth import AuthManager
+from .connection import WebSocketConnection
 from .encoding import MessageEncoder, MessageDecoder
-from .models import Trade, Quote, Ohlc, Order, Position, AccountUpdate, ExpectedPrice, SecurityDefinition, TradeExtra, \
-    MarketIndex, ForeignInvestor
 from .exceptions import (
     AuthenticationError,
     ConnectionError,
     SubscriptionError,
     ConnectionClosed,
 )
+from .models import Trade, Quote, Ohlc, Order, AccountUpdate, ExpectedPrice, SecurityDefinition, TradeExtra, \
+    MarketIndex, ForeignInvestor, Position, EstimatedMarketIndex, Session
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -38,18 +39,22 @@ if not logger.handlers:
 DEFAULT_BOARDS = ["G1", "G3", "G4", "G7", "T1", "T2", "T3", "T4", "T6"]
 
 _MSG_TYPE_MAP = {
-    "t": ("trade", Trade),
-    "te": ("trade_extra", TradeExtra),
-    "e": ("expected_price", ExpectedPrice),
-    "sd": ("security_definition", SecurityDefinition),
-    "q": ("quote", Quote),
-    "b": ("ohlc", Ohlc),
-    "bc": ("ohlc_closed", Ohlc),
-    "o": ("order", Order),
-    "p": ("position", Position),
-    "mi": ("market_index", MarketIndex),
-    "a":  ("account", AccountUpdate),
-    "f": ("foreign", ForeignInvestor),
+    "t": ("trade", Trade, None),
+    "te": ("trade_extra", TradeExtra, None),
+    "e": ("expected_price", ExpectedPrice, None),
+    "sd": ("security_definition", SecurityDefinition, None),
+    "q": ("quote", Quote, None),
+    "b": ("ohlc", Ohlc, None),
+    "bc": ("ohlc_closed", Ohlc, None),
+    "do": ("order_event", Order, "order"),
+    "eo": ("order_event", Order, "order"),
+    "dp": ("position_event", Position, "position"),
+    "ep": ("position_event", Position, "position"),
+    "mi": ("market_index", MarketIndex, None),
+    "emi": ("estimated_market_index", EstimatedMarketIndex, "marketIndex"),
+    "a": ("account", AccountUpdate, None),
+    "f": ("foreign", ForeignInvestor, None),
+    "s": ("session", Session, None),
 }
 
 
@@ -218,7 +223,8 @@ class TradingClient:
             await self._subscribe_channel(channel, symbols)
 
         if on_trade:
-            self.on("trade", on_trade)
+            _handler = self._make_filtered_handler(board_id, "boardId", on_trade) if board_id is not None else on_trade
+            self.on("trade", _handler)
 
     async def subscribe_trade_extra(
             self, symbols: List[str], on_trade_extra: Optional[Callable[[TradeExtra], None]] = None, encoding="json",
@@ -233,7 +239,9 @@ class TradingClient:
             await self._subscribe_channel(channel, symbols)
 
         if on_trade_extra:
-            self.on("trade_extra", on_trade_extra)
+            _handler = self._make_filtered_handler(board_id, "boardId",
+                                                   on_trade_extra) if board_id is not None else on_trade_extra
+            self.on("trade_extra", _handler)
 
     async def subscribe_expected_price(
             self, symbols: List[str], on_expected_price: Optional[Callable[[ExpectedPrice], None]] = None,
@@ -248,7 +256,57 @@ class TradingClient:
             await self._subscribe_channel(channel, symbols)
 
         if on_expected_price:
-            self.on("expected_price", on_expected_price)
+            _handler = self._make_filtered_handler(board_id, "boardId",
+                                                   on_expected_price) if board_id is not None else on_expected_price
+            self.on("expected_price", _handler)
+
+    async def subscribe_order_event(
+            self, market_type="STOCK",
+            on_order_event: Optional[Callable[[Order], None]] = None,
+            encoding="json"
+    ) -> None:
+        channel = f"order.{market_type}.{encoding}"
+        await self._subscribe_channel(channel, [])
+
+        if on_order_event:
+            self.on("order_event", on_order_event)
+
+    async def subscribe_broker_order_event(
+            self,
+            investor_id: str,
+            market_type="STOCK",
+            on_order_event: Optional[Callable[[Order], None]] = None,
+            encoding="json"
+    ) -> None:
+        channel = f"order.broker.{market_type}.{investor_id}.{encoding}"
+        await self._subscribe_channel(channel, [])
+
+        if on_order_event:
+            self.on("order_event", on_order_event)
+
+    async def subscribe_position_event(
+            self, market_type="STOCK",
+            on_position_event: Optional[Callable[[Position], None]] = None,
+            encoding="json"
+    ) -> None:
+        channel = f"position.{market_type}.{encoding}"
+        await self._subscribe_channel(channel, [])
+
+        if on_position_event:
+            self.on("position_event", on_position_event)
+
+    async def subscribe_broker_position_event(
+            self,
+            investor_id: str,
+            market_type="STOCK",
+            on_position_event: Optional[Callable[[Position], None]] = None,
+            encoding="json"
+    ) -> None:
+        channel = f"position.broker.{market_type}.{investor_id}.{encoding}"
+        await self._subscribe_channel(channel, [])
+
+        if on_position_event:
+            self.on("position_event", on_position_event)
 
     async def subscribe_sec_def(
             self, symbols: List[str], on_sec_def: Optional[Callable[[SecurityDefinition], None]] = None,
@@ -263,7 +321,9 @@ class TradingClient:
             await self._subscribe_channel(channel, symbols)
 
         if on_sec_def:
-            self.on("security_definition", on_sec_def)
+            _handler = self._make_filtered_handler(board_id, "boardId",
+                                                   on_sec_def) if board_id is not None else on_sec_def
+            self.on("security_definition", _handler)
 
     async def subscribe_market_index(
             self, market_index: str, on_market_index: Optional[Callable[[MarketIndex], None]] = None, encoding="json"
@@ -275,6 +335,18 @@ class TradingClient:
 
         if on_market_index:
             self.on("market_index", on_market_index)
+
+    async def subscribe_estimated_market_index(
+            self, estimated_market_index: str,
+            on_estimated_market_index: Optional[Callable[[EstimatedMarketIndex], None]] = None, encoding="json"
+    ) -> None:
+        channel = f"estimated_market_index.{estimated_market_index}.json"
+        if encoding == "msgpack":
+            channel = f"estimated_market_index.{estimated_market_index}.msgpack"
+        await self._subscribe_channel(channel, [])
+
+        if on_estimated_market_index:
+            self.on("estimated_market_index", on_estimated_market_index)
 
     async def subscribe_quotes(
             self, symbols: List[str], on_quote: Optional[Callable[[Quote], None]] = None, encoding="json", board_id=None
@@ -288,7 +360,8 @@ class TradingClient:
             await self._subscribe_channel(channel, symbols)
 
         if on_quote:
-            self.on("quote", on_quote)
+            _handler = self._make_filtered_handler(board_id, "boardId", on_quote) if board_id is not None else on_quote
+            self.on("quote", _handler)
 
     async def subscribe_foreign_trading(
             self, symbols: List[str], board_id: str = "*",
@@ -324,6 +397,21 @@ class TradingClient:
 
         if on_ohlc:
             self.on("ohlc", on_ohlc)
+
+    async def subscribe_session(
+            self,
+            product_group_id: str,
+            board_id: str = "*",
+            on_session: Optional[Callable[[Session], None]] = None, encoding="json"
+    ) -> None:
+        channel = f"session.{product_group_id}.{board_id}.json"
+
+        if encoding == "msgpack":
+            channel = f"session.{product_group_id}.{board_id}.msgpack"
+        await self._subscribe_channel(channel, [])
+
+        if on_session:
+            self.on("session", on_session)
 
     async def subscribe_ohlc_closed(
             self,
@@ -414,6 +502,15 @@ class TradingClient:
 
         logger.info(f"Unsubscribed from {channel}: {symbols}")
 
+    def _make_filtered_handler(self, board_id: Optional[str], attr: str, handler: Callable) -> Callable:
+        """Wrap handler to only fire when obj.{attr} == board_id."""
+
+        def _filtered(obj, _b=board_id, _a=attr, _cb=handler):
+            if getattr(obj, _a, None) == _b:
+                _cb(obj)
+
+        return _filtered
+
     def on(self, event: str, handler: Callable) -> None:
         if event not in self._event_handlers:
             self._event_handlers[event] = []
@@ -477,7 +574,8 @@ class TradingClient:
                         break
 
                     delay = min(2 ** (reconnect_attempt - 1), max_reconnect_delay)
-                    logger.info(f"Connection error detected. Reconnecting in {delay}s (attempt {reconnect_attempt}/{self.max_retries})...")
+                    logger.info(
+                        f"Connection error detected. Reconnecting in {delay}s (attempt {reconnect_attempt}/{self.max_retries})...")
 
                     self._emit("reconnecting", {
                         "attempt": reconnect_attempt,
@@ -579,8 +677,12 @@ class TradingClient:
             logger.error(f"Server error: {error_msg}")
             self._emit("error", Exception(error_msg))
         elif msg_type in _MSG_TYPE_MAP:
-            event, model_cls = _MSG_TYPE_MAP[msg_type]
-            obj = model_cls.from_dict(data)
+            event, model_cls, field = _MSG_TYPE_MAP[msg_type]
+            if field is not None and field != "":
+                obj = model_cls.from_dict(data[field])
+                obj.receivedAt = data["_receivedAt"]
+            else:
+                obj = model_cls.from_dict(data)
             self._emit(event, obj)
             # Only push to queue if no callback registered (using async iterator)
             if event not in self._event_handlers:

@@ -4,12 +4,16 @@ Demonstrates:
 
 This example shows how to receive real-time foreigner trading data
 """
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import asyncio
 from datetime import datetime
 
-from trading_websocket import TradingClient
-from trading_websocket.models import ForeignInvestor
+from dnse import TradingClient
+from dnse.websocket.models import ForeignInvestor
 
 
 async def main():

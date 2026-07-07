@@ -28,10 +28,14 @@ and investment applications.
 #### Install from PyPI
 
 ```console
-pip install openapi-sdk 
+pip install openapi-sdk
 ```
 
-Upgrade
+Upgrade:
+
+```console
+pip install --upgrade openapi-sdk
+```
 
 ### Usage
 
@@ -44,11 +48,15 @@ client = DNSEClient(
     api_key="your_api_key",
     api_secret="your_api_secret",
     base_url="https://openapi.dnse.com.vn",
+    api_version="2026-05-07",
 )
 
 status, body = client.get_accounts(dry_run=False)
 print(status, body)
 ```
+
+The SDK sends the API version in the `version` header. If `api_version` is omitted, it defaults to `2026-01-01`; it can also be set
+with the `DNSE_API_VERSION` environment variable.
 
 ### Dry Run
 
@@ -68,63 +76,48 @@ python sdk/python/api/get_accounts.py
 
 #### Trading API
 
-- `get_accounts.py`
-    - Demonstrates how to retrieve all trading sub-accounts managed under the account corresponding to the API Key.
-- `get_balances.py`
-    - Demonstrates how to retrieve asset balances of a trading sub-account.
-- `get_loan_packages.py`
-    - Demonstrates how to retrieve available loan package codes. It's neccessary for placing an order
-- `get_ppse.py`
-    - Demonstrates how to retrieve buying power and selling power before placing an order.
-- `get_orders.py`
-    - Demonstrates how to retrieve intraday order book.
-- `get_order_detail.py`
-    - Demonstrates how to retrieve detailed information of a specific order (by ID).
-- `get_execution_detail.py`
-    - Demonstrates how to retrieve derivative execution details and reports for a specific order (by ID).
-- `get_positions.py`
-    - Demonstrates how to retrieve current holding positions.
-- `get_positions_by_id.py`
-    - Demonstrates how to retrieve detailed information of a specific postion (by ID).
-- `close_position.py`
-    - Demonstrates how to close an existing position (by ID).
-- `get_order_history.py`
-    - Demonstrates how to retrieve historical orders.
-- `send_email_otp.py`
-    - Demonstrates how to request an OTP sent to your registered email. The OTP is required for exchange trading token.
-- `create_trading_token.py`
-    - Demonstrates how to generate a Trading Token required for order placement.
-- `post_order.py`
-    - Demonstrates how to submit a new trading order.
-- `cancel_order.py`
-    - Demonstrates how to cancel an existing order.
-- `replace_order.py`
-    - Demonstrates how to modify an existing order.
+| Function                  | Description                                                                                                           |
+|---------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| `get_accounts.py`         | Demonstrates how to retrieve all trading sub-accounts managed under the account corresponding to the API Key.         |
+| `get_balances.py`         | Demonstrates how to retrieve asset balances of a trading sub-account.                                                 |
+| `get_loan_packages.py`    | Demonstrates how to retrieve available loan package codes. It is necessary for placing an order.                      |
+| `get_ppse.py`             | Demonstrates how to retrieve buying power and selling power before placing an order.                                  |
+| `get_orders.py`           | Demonstrates how to retrieve intraday order book.                                                                     |
+| `get_order_detail.py`     | Demonstrates how to retrieve detailed information of a specific order (by ID).                                        |
+| `get_order_history.py`    | Demonstrates how to retrieve historical orders.                                                                       |
+| `get_corporate_action_history.py` | Demonstrates how to retrieve corporate action history.                                                         |
+| `get_execution_detail.py` | Demonstrates how to retrieve detailed execution information of an order.                                              |
+| `get_positions.py`        | Demonstrates how to retrieve current holding positions.                                                               |
+| `get_positions_by_id.py`  | Demonstrates how to retrieve detailed information of a specific position (by ID).                                     |
+| `close_position.py`       | Demonstrates how to close an existing position (by ID).                                                               |
+| `send_email_otp.py`       | Demonstrates how to request an OTP sent to your registered email. The OTP is required for generating a trading token. |
+| `create_trading_token.py` | Demonstrates how to generate a Trading Token required for order placement.                                            |
+| `post_order.py`           | Demonstrates how to submit a new trading order.                                                                       |
+| `cancel_order.py`         | Demonstrates how to cancel an existing order.                                                                         |
+| `replace_order.py`        | Demonstrates how to modify an existing order.                                                                         |
 
 #### Market Data API
 
-- `sec_def.py`
-    - Demonstrates how to receive securities definition updates.
-- `get_instruments.py`
-    - Demonstrates how to retrieve the list of available trading instruments and their metadata.
-- `get_trades.py`
-    - Demonstrates how to retrieve historical trade data for a specific instrument.
-- `get_latest_trade.py`
-    - Demonstrates how to retrieve the most recent trade for a specific instrument.
-- `get_ohlc.py`
-    - Demonstrates how to retrieve OHLC (Open, High, Low, Close) data for a specific instrument over a given time range.
+| Function                     | Description                                                                                |
+|------------------------------|--------------------------------------------------------------------------------------------|
+| `get_security_definition.py` | Demonstrates how to retrieve security definition and instrument details.                   |
+| `get_instruments.py`         | Demonstrates how to retrieve the list of available trading instruments and their metadata. |
+| `get_trades.py`              | Demonstrates how to retrieve historical trade data for a specific instrument.              |
+| `get_latest_trade.py`        | Demonstrates how to retrieve the most recent trade for a specific instrument.              |
+| `get_ohlc.py`                | Demonstrates how to retrieve OHLC (Open, High, Low, Close) data for a given time range.    |
+| `get_close_price.py`         | Demonstrates how to retrieve the latest closing price of a specific instrument.            |
+| `get_working_dates.py`       | Demonstrates how to retrieve trading working dates.                                        |
 
 ### WebSocket Market Data
 
-- `quote.py`
-    - Demonstrates how to receive real-time information on the best bid and ask prices for securities
-- `trade.py`
-    - Demonstrates how to receive real-time order matching (tick) data.
-- `trade_extra.py`
-    - Demonstrates how to receive real-time order matching (tick) data and some information automatically compiled by DNSE (active
-      buy/sell, average matching price)
-- `ohlc.py`
-    - Demonstrates how to receive OHLC data.
-- `expected_price.py`
-    - Demonstrates how to receive expected price information, which is distributed in ATO and ATC sessions
-- `sec_def.py`
+| Function              | Description                                                                          |
+|-----------------------|--------------------------------------------------------------------------------------|
+| `sec_def.py`          | Demonstrates how to receive real-time security definition updates.                   |
+| `quote.py`            | Demonstrates how to receive real-time best bid and ask prices.                       |
+| `trade.py`            | Demonstrates how to receive real-time trade (tick) data.                             |
+| `trade_extra.py`      | Demonstrates how to receive real-time trade data with additional aggregated metrics. |
+| `ohlc.py`             | Demonstrates how to receive real-time OHLC data.                                     |
+| `ohlc_closed.py`      | Demonstrates how to receive completed OHLC candle data.                              |
+| `expected_price.py`   | Demonstrates how to receive expected price data during ATO and ATC sessions.         |
+| `foreign_investor.py` | Demonstrates how to receive foreign investor trading data.                           |
+| `market_index.py`     | Demonstrates how to receive market index data.                                       |

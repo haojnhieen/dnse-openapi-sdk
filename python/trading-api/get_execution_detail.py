@@ -9,9 +9,9 @@ from dnse import DNSEClient
 
 def main():
     client = DNSEClient(
-        api_key="eyJvcmciOiJkbnNlIiwiaWQiOiIwZGE3YjYxMTE0ZTQ0YmIxYmRkODVjZDJmNmJlYmQzZCIsImgiOiJtdXJtdXIxMjgifQ==",
-        api_secret="ez3nn4GvOSgDFuFyVbAUc1NU6Ucbhm9ZUxutgZmNnc3EZ9wFZ6jo6du8Ip-TU9Ml6e9cv-VPLupx3C-DEZPMCQ",
-        base_url="https://openapi-uat.dnse.com.vn",
+        api_key="replace-with-api-key",
+        api_secret="replace-with-api-secret",
+        base_url="https://openapi.dnse.com.vn",
     )
 
     status, body = client.get_execution_detail(

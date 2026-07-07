@@ -14,7 +14,7 @@ def main():
         base_url="https://openapi.dnse.com.vn",
     )
 
-    status, body = client.get_accounts(dry_run=False)
+    status, body = client.get_foreign_trading(symbol="SSI", board_id="G1", from_date=1781037427, to_date=1781062643, limit = 100, order = "DESC", next_page_token=None, dry_run=False)
     print(status, body)
 
 

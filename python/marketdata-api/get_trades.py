@@ -2,7 +2,7 @@
 import os
 import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from dnse import DNSEClient
 
@@ -14,16 +14,7 @@ def main():
         base_url="https://openapi.dnse.com.vn",
     )
 
-    status, body = client.get_ohlc(
-        bar_type="STOCK",
-        query={
-            "symbol": "HPG",
-            "resolution": "1",
-            "from": 1735689600,
-            "to": 1735776000,
-        },
-        dry_run=False,
-    )
+    status, body = client.get_trades(symbol="GAS", board_id="G1", from_date=1773282637, to_date=1773289837, limit = 100, order = "DESC", next_page_token=None, dry_run=False)
     print(status, body)
 
 

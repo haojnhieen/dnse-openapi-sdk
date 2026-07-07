@@ -13,18 +13,46 @@ from decimal import Decimal
 from typing import Optional, List, Dict, Any, Tuple
 
 
-def parse_timestamp(v: Any):
+def parse_timestamp(v: Any, date_only: bool = False) -> Optional[str]:
+    """Parse various timestamp formats into string with milliseconds.
+
+    Supports:
+    - protobuf: {'Seconds': 1501718400, 'Nanos': 0}
+    - ISO string: '2017-08-03T00:00:00Z'
+    - Unix int/float: 1501718400
+
+    Returns:
+        Timestamp string with format "YYYY-MM-DD HH:MM:SS.mmm" or None
+    """
     try:
+        if v is None:
+            return None
+
         if isinstance(v, str):
-            return datetime.fromisoformat(v.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S")
+            dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
+            if date_only:
+                return dt.strftime("%Y-%m-%d")
+            return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # Cut to milliseconds
+
         if isinstance(v, dict):
             seconds = v.get("Seconds", v.get("seconds", 0))
             nanos = v.get("Nanos", v.get("nanos", 0))
-            total_seconds = seconds + (nanos / 1e9)
-            return datetime.fromtimestamp(total_seconds).strftime('%Y-%m-%d %H:%M:%S')
+            dt = datetime.fromtimestamp(seconds + nanos / 1e9)
+            if date_only:
+                return dt.strftime("%Y-%m-%d")
+            return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # Cut to milliseconds
+
+        if isinstance(v, (int, float)):
+            # If already in milliseconds (>1e12), convert to seconds
+            if v > 1e12:
+                dt = datetime.fromtimestamp(v / 1000)
+            else:
+                dt = datetime.fromtimestamp(v)
+            if date_only:
+                return dt.strftime("%Y-%m-%d")
+            return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # Cut to milliseconds
     except Exception:
         return None
-
 
 @dataclass
 class PriceLevel:
@@ -53,6 +81,7 @@ class Trade:
     lowestPrice: float
     openPrice: float
     tradingSessionId: int
+    time: Optional[str] = None
     receivedAt: Optional[float] = field(default=None, repr=False)
 
     @classmethod
@@ -70,6 +99,7 @@ class Trade:
             lowestPrice=data.get("lowestPrice"),
             openPrice=data.get("openPrice"),
             tradingSessionId=data.get("tradingSessionId"),
+            time=parse_timestamp(data.get("time")),
             receivedAt=data.get("_receivedAt"),
         )
 
@@ -90,6 +120,7 @@ class TradeExtra:
     lowestPrice: float
     openPrice: float
     tradingSessionId: int
+    time: Optional[str] = None
     receivedAt: Optional[float] = field(default=None, repr=False)
 
     @classmethod
@@ -109,8 +140,10 @@ class TradeExtra:
             lowestPrice=data.get("lowestPrice"),
             openPrice=data.get("openPrice"),
             tradingSessionId=data.get("tradingSessionId"),
+            time=parse_timestamp(data.get("time")),
             receivedAt=data.get("_receivedAt"),
         )
+
 
 @dataclass
 class ForeignInvestor:
@@ -193,7 +226,7 @@ class MarketIndex:
     marketIndexClass: int
     marketId: int
     tradingSessionId: int
-    transactTime: str
+    transactTime: Optional[str] = None
 
     receivedAt: Optional[float] = field(default=None, repr=False)
 
@@ -232,6 +265,38 @@ class MarketIndex:
 
 
 @dataclass
+class EstimatedMarketIndex:
+    indexName: str
+    changedRatio: float
+    changedValue: float
+    fluctuationSteadinessIssueCount: float
+    fluctuationDownIssueCount: float
+    fluctuationUpIssueCount: float
+    valueIndexes: float
+    grossTradeAmount: float
+    totalVolumeTraded: float
+    time: Optional[str] = None
+
+    receivedAt: Optional[float] = field(default=None, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "EstimatedMarketIndex":
+        return cls(
+            indexName=data.get("indexName"),
+            changedRatio=data.get("changedRatio"),
+            changedValue=data.get("changedValue"),
+            fluctuationSteadinessIssueCount=data.get("fluctuationSteadinessIssueCount"),
+            fluctuationDownIssueCount=data.get("fluctuationDownIssueCount"),
+            fluctuationUpIssueCount=data.get("fluctuationUpIssueCount"),
+            valueIndexes=data.get("valueIndexes"),
+            grossTradeAmount=data.get("grossTradeAmount"),
+            totalVolumeTraded=data.get("totalVolumeTraded"),
+            receivedAt=data.get("_receivedAt"),
+            time=data.get("time"),
+        )
+
+
+@dataclass
 class ExpectedPrice:
     marketId: str
     boardId: str
@@ -240,6 +305,7 @@ class ExpectedPrice:
     closePrice: float
     expectedTradePrice: float
     expectedTradeQuantity: int
+    time: Optional[str] = None
     receivedAt: Optional[float] = field(default=None, repr=False)
 
     @classmethod
@@ -252,6 +318,7 @@ class ExpectedPrice:
             closePrice=data.get("closePrice"),
             expectedTradePrice=data.get("expectedTradePrice"),
             expectedTradeQuantity=data.get("expectedTradeQuantity"),
+            time=parse_timestamp(data.get("time")),
             receivedAt=data.get("_receivedAt"),
         )
 
@@ -272,6 +339,9 @@ class SecurityDefinition:
     symbolAdminStatusCode: str
     symbolTradingMethodStatusCode: str
     symbolTradingSanctionStatusCode: str
+    finalTradeDate: Optional[str]
+    listingDate: Optional[str]
+    time: Optional[str] = None
     receivedAt: Optional[float] = field(default=None, repr=False)
 
     @classmethod
@@ -291,6 +361,114 @@ class SecurityDefinition:
             symbolAdminStatusCode=data.get("symbolAdminStatusCode"),
             symbolTradingMethodStatusCode=data.get("symbolTradingMethodStatusCode"),
             symbolTradingSanctionStatusCode=data.get("symbolTradingSanctionStatusCode"),
+            finalTradeDate=parse_timestamp(data.get("finalTradeDate"), date_only=True),
+            listingDate=parse_timestamp(data.get("listingDate"), date_only=True),
+            time=parse_timestamp(data.get("time")),
+            receivedAt=data.get("_receivedAt"),
+        )
+
+
+@dataclass
+class Order:
+    id: str
+    side: str
+    accountNo: str
+    symbol: str
+
+    price: float
+    priceSecure: float
+    averagePrice: float
+
+    quantity: int
+    fillQuantity: int
+    canceledQuantity: int
+    leaveQuantity: int
+
+    orderType: str
+    orderStatus: str
+
+    loanPackageId: int
+    marketType: str
+
+    transDate: str
+    createdDate: str
+    modifiedDate: str
+    receivedAt: Optional[float] = field(default=None, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Order":
+        return cls(
+            id=data.get("id"),
+            side=data.get("side"),
+            accountNo=data.get("accountNo"),
+            symbol=data.get("symbol"),
+
+            price=float(data.get("price")),
+            priceSecure=float(data.get("priceSecure")),
+            averagePrice=float(data.get("averagePrice")),
+
+            quantity=int(data.get("quantity")),
+            fillQuantity=int(data.get("fillQuantity")),
+            canceledQuantity=int(data.get("canceledQuantity")),
+            leaveQuantity=int(data.get("leaveQuantity")),
+
+            orderType=data.get("orderType"),
+            orderStatus=data.get("orderStatus"),
+
+            loanPackageId=int(data.get("loanPackageId")),
+            marketType=data.get("marketType"),
+
+            transDate=data.get("transDate"),
+            createdDate=data.get("createdDate"),
+            modifiedDate=data.get("modifiedDate"),
+            receivedAt=data.get("_receivedAt"),
+        )
+
+
+@dataclass
+class Position:
+    id: int
+    accountNo: str
+    symbol: str
+    status: str
+    loanPackageId: int
+    side: str
+    accumulateQuantity: int
+    tradeQuantity: int
+    closedQuantity: int
+    costPrice: float
+    marketPrice: float
+    breakEvenPrice: float
+    openQuantity: int
+    overNightQuantity: int
+    averageClosePrice: float
+    marketType: str
+    createdDate: str
+    modifiedDate: str
+
+    receivedAt: Optional[float] = field(default=None, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Position":
+        return cls(
+            id=data.get("id"),
+            accountNo=data.get("accountNo"),
+            symbol=data.get("symbol"),
+            status=data.get("status"),
+            loanPackageId=data.get("loanPackageId"),
+            side=data.get("side"),
+            accumulateQuantity=data.get("accumulateQuantity"),
+            tradeQuantity=data.get("tradeQuantity"),
+            closedQuantity=data.get("closedQuantity"),
+            costPrice=float(data.get("costPrice")),
+            marketPrice=float(data.get("marketPrice")),
+            breakEvenPrice=float(data.get("breakEvenPrice")),
+            openQuantity=data.get("openQuantity"),
+            overNightQuantity=data.get("overNightQuantity"),
+            averageClosePrice=float(data.get("averageClosePrice")),
+            marketType=data.get("marketType"),
+            createdDate=data.get("createdDate"),
+            modifiedDate=data.get("modifiedDate"),
             receivedAt=data.get("_receivedAt"),
         )
 
@@ -305,6 +483,7 @@ class Quote:
     offer: List[PriceLevel]
     totalOfferQtty: float
     totalBidQtty: float
+    time: Optional[str] = None
     receivedAt: Optional[float] = field(default=None, repr=False)
 
     @classmethod
@@ -326,6 +505,7 @@ class Quote:
             offer=offers,
             totalOfferQtty=data.get("totalOfferQtty"),
             totalBidQtty=data.get("totalBidQtty"),
+            time=parse_timestamp(data.get("time")),
             receivedAt=data.get("_receivedAt"),
         )
 
@@ -388,112 +568,25 @@ class Ohlc:
 
 
 @dataclass
-class Order:
-    id: str
-    side: str
-    accountNo: str
-    symbol: str
-
-    price: float
-    priceSecure: float
-    averagePrice: float
-
-    quantity: int
-    fillQuantity: int
-    canceledQuantity: int
-    leaveQuantity: int
-
-    orderType: str
-    orderStatus: str
-
-    loanPackageId: int
-    marketType: str
-
-    transDate: str
-    createdDate: str
-    modifiedDate: str
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Order":
-        return cls(
-            id=data.get("id"),
-            side=data.get("side"),
-            accountNo=data.get("accountNo") or data.get("account_no"),
-            symbol=data.get("symbol") or data.get("s"),
-
-            price=float(data.get("price", 0.0)),
-            priceSecure=float(data.get("priceSecure", 0.0)),
-            averagePrice=float(data.get("averagePrice", 0.0)),
-
-            quantity=int(data.get("quantity", 0)),
-            fillQuantity=int(data.get("fillQuantity", 0)),
-            canceledQuantity=int(data.get("canceledQuantity", 0)),
-            leaveQuantity=int(data.get("leaveQuantity", 0)),
-
-            orderType=data.get("orderType"),
-            orderStatus=data.get("orderStatus"),
-
-            loanPackageId=int(data.get("loanPackageId", 0)),
-            marketType=data.get("marketType"),
-
-            transDate=data.get("transDate"),
-            createdDate=data.get("createdDate"),
-            modifiedDate=data.get("modifiedDate"),
-        )
-
-
-@dataclass
 class Session:
-    marketId: int
-    boardId: int
-    eventId: int
+    marketId: str
+    boardId: str
+    eventId: str
     tradingSessionId: int
-    tscProdGrpId: int
+    tscProdGrpId: str
+    time: Optional[str] = None
+    receivedAt: Optional[float] = field(default=None, repr=False)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Session":
         return cls(
-            marketId=data.get("marketId", 0),
-            boardId=data.get("boardId", 0),
-            eventId=data.get("eventId", 0),
+            marketId=data.get("marketId", ""),
+            boardId=data.get("boardId", ""),
+            eventId=data.get("eventId", ""),
             tradingSessionId=data.get("tradingSessionId", 0),
-            tscProdGrpId=data.get("tscProdGrpId", 0),
-        )
-
-
-@dataclass
-class Position:
-    symbol: str
-    quantity: int
-    averagePrice: Decimal
-    marketValue: Decimal
-    costBasis: Decimal
-    unrealizedPl: Decimal
-    unrealizedPlPercent: Decimal
-    timestamp: datetime
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Position":
-        """Parse position from message data.
-
-        Args:
-            data: Raw message dict with either abbreviated or full field names
-
-        Returns:
-            Position instance
-
-        Example:
-            >>> Position.from_dict({"S": "AAPL", "q": 100, "ap": "150.00", ...})
-        """
-        return cls(
-            symbol=data.get("symbol"),
-            quantity=data.get("quantity"),
-            averagePrice=Decimal(str(data.get("averagePrice"))),
-            marketValue=Decimal(str(data.get("marketValue"))),
-            costBasis=Decimal(str(data.get("costBasis"))),
-            unrealizedPl=Decimal(str(data.get("unrealizedPl"))),
-            unrealizedPlPercent=Decimal(str(data.get("unrealizedPlPercent"))),
-            timestamp=datetime.fromtimestamp((data.get("timestamp")) / 1000),
+            tscProdGrpId=data.get("tscProdGrpId", ""),
+            time=parse_timestamp(data.get("sendingTime")),
+            receivedAt=data.get("_receivedAt"),
         )
 
 
