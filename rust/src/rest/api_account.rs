@@ -50,4 +50,15 @@ impl DnseClient {
 
         self.request(Method::POST, &format!("/accounts/positions/{}/close", position_id), Some(&query), None, Some(&headers), dry_run).await
     }
+
+    pub async fn get_corporate_action_history(&self, account_no: &str, symbol: Option<&str>, ca_type: Option<&str>, ca_status: Option<&str>, page_index: Option<usize>, page_size: Option<usize>, dry_run: bool) -> Result<(u16, Vec<u8>), Box<dyn std::error::Error>> {
+        let mut query = HashMap::new();
+        if let Some(s) = symbol { query.insert("symbol", s.to_string()); }
+        if let Some(t) = ca_type { query.insert("caType", t.to_string()); }
+        if let Some(st) = ca_status { query.insert("caStatus", st.to_string()); }
+        if let Some(i) = page_index { query.insert("pageIndex", i.to_string()); }
+        if let Some(sz) = page_size { query.insert("pageSize", sz.to_string()); }
+
+        self.request(Method::GET, &format!("/accounts/{}/corporate-action-history", account_no), Some(&query), None, None, dry_run).await
+    }
 }

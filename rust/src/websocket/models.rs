@@ -53,6 +53,8 @@ pub enum DnseWsEvent {
     AccountUpdate(AccountUpdate),
     MarketIndex(MarketIndex),
     ForeignInvestor(ForeignInvestor),
+    EstimatedMarketIndex(EstimatedMarketIndex),
+    Session(Session),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -373,4 +375,45 @@ pub struct AccountUpdate {
     pub buyingPower: String,
     pub portfolioValue: Option<String>,
     pub equity: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EstimatedMarketIndex {
+    pub indexName: String,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub changedRatio: f64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub changedValue: f64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub fluctuationSteadinessIssueCount: f64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub fluctuationDownIssueCount: f64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub fluctuationUpIssueCount: f64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub valueIndexes: f64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub grossTradeAmount: f64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub totalVolumeTraded: f64,
+    pub time: Option<String>,
+    #[serde(default)]
+    pub _receivedAt: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Session {
+    #[serde(default)]
+    pub marketId: String,
+    #[serde(default)]
+    pub boardId: String,
+    #[serde(default)]
+    pub eventId: String,
+    #[serde(default, deserialize_with = "deserialize_flex_i64")]
+    pub tradingSessionId: i64,
+    #[serde(default)]
+    pub tscProdGrpId: String,
+    pub time: Option<String>,
+    #[serde(default)]
+    pub _receivedAt: f64,
 }

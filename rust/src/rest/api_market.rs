@@ -55,4 +55,47 @@ impl DnseClient {
         }
         self.request(Method::GET, &format!("/price/{}/close", symbol), Some(&query), None, None, dry_run).await
     }
+
+    pub async fn get_quotes(&self, symbol: &str, board_id: Option<&str>, from_date: Option<&str>, to_date: Option<&str>, limit: Option<usize>, order: Option<&str>, next_page_token: Option<&str>, dry_run: bool) -> Result<(u16, Vec<u8>), Box<dyn std::error::Error>> {
+        let mut query = HashMap::new();
+        if let Some(b) = board_id { query.insert("boardId", b.to_string()); }
+        if let Some(f) = from_date { query.insert("from", f.to_string()); }
+        if let Some(t) = to_date { query.insert("to", t.to_string()); }
+        if let Some(l) = limit { query.insert("limit", l.to_string()); }
+        if let Some(o) = order { query.insert("order", o.to_string()); }
+        if let Some(n) = next_page_token { query.insert("nextPageToken", n.to_string()); }
+
+        self.request(Method::GET, &format!("/price/{}/quotes", symbol), Some(&query), None, None, dry_run).await
+    }
+
+    pub async fn get_foreign_trading(&self, symbol: &str, board_id: Option<&str>, from_date: Option<&str>, to_date: Option<&str>, limit: Option<usize>, order: Option<&str>, next_page_token: Option<&str>, dry_run: bool) -> Result<(u16, Vec<u8>), Box<dyn std::error::Error>> {
+        let mut query = HashMap::new();
+        if let Some(b) = board_id { query.insert("boardId", b.to_string()); }
+        if let Some(f) = from_date { query.insert("from", f.to_string()); }
+        if let Some(t) = to_date { query.insert("to", t.to_string()); }
+        if let Some(l) = limit { query.insert("limit", l.to_string()); }
+        if let Some(o) = order { query.insert("order", o.to_string()); }
+        if let Some(n) = next_page_token { query.insert("nextPageToken", n.to_string()); }
+
+        self.request(Method::GET, &format!("/price/{}/foreign-trading", symbol), Some(&query), None, None, dry_run).await
+    }
+
+    pub async fn get_latest_quote(&self, symbol: &str, board_id: Option<&str>, dry_run: bool) -> Result<(u16, Vec<u8>), Box<dyn std::error::Error>> {
+        let mut query = HashMap::new();
+        if let Some(b) = board_id {
+            query.insert("boardId", b.to_string());
+        }
+        self.request(Method::GET, &format!("/price/{}/quotes/latest", symbol), Some(&query), None, None, dry_run).await
+    }
+
+    pub async fn get_working_dates(&self, dry_run: bool) -> Result<(u16, Vec<u8>), Box<dyn std::error::Error>> {
+        self.request(Method::GET, "/market/working-dates", None, None, None, dry_run).await
+    }
+
+    pub async fn get_latest_session(&self, tsc_prod_grp_id: Option<&str>, board_id: Option<&str>, dry_run: bool) -> Result<(u16, Vec<u8>), Box<dyn std::error::Error>> {
+        let mut query = HashMap::new();
+        if let Some(t) = tsc_prod_grp_id { query.insert("tscProdGrpId", t.to_string()); }
+        if let Some(b) = board_id { query.insert("boardId", b.to_string()); }
+        self.request(Method::GET, "/market/trading-session", Some(&query), None, None, dry_run).await
+    }
 }

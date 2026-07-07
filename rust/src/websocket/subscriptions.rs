@@ -147,4 +147,22 @@ impl TradingClient {
     pub async fn subscribe_account(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.subscribe_channel("account", vec![]).await
     }
+
+    pub async fn subscribe_estimated_market_index(&self, index_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let channel = format!("estimated_market_index.{}.{}", index_name, self.config.encoding);
+        self.subscribe_channel(&channel, vec![]).await
+    }
+
+    pub async fn subscribe_session(&self, board_id: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+        let boards = match board_id {
+            Some(b) => vec![b.to_string()],
+            None => vec!["G1", "G3", "G4", "G7", "T1", "T2", "T3", "T4", "T6"].into_iter().map(String::from).collect(),
+        };
+
+        for board in boards {
+            let channel = format!("session.{}.{}", board, self.config.encoding);
+            self.subscribe_channel(&channel, vec![]).await?;
+        }
+        Ok(())
+    }
 }
