@@ -355,18 +355,47 @@ pub struct Order {
     pub marketType: Option<String>,
     #[serde(default)]
     pub transDate: Option<String>,
+    #[serde(default)]
+    pub createdDate: Option<String>,
+    #[serde(default)]
+    pub modifiedDate: Option<String>,
+    #[serde(default)]
+    pub _receivedAt: f64,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Position {
-    pub symbol: String,
     #[serde(default, deserialize_with = "deserialize_flex_i64")]
-    pub quantity: i64,
-    pub averagePrice: String,
-    pub marketValue: Option<String>,
-    pub costBasis: Option<String>,
-    pub unrealizedPl: Option<String>,
-    pub unrealizedPlPercent: Option<String>,
+    pub id: i64,
+    pub accountNo: String,
+    pub symbol: String,
+    pub status: String,
+    #[serde(default, deserialize_with = "deserialize_flex_i64")]
+    pub loanPackageId: i64,
+    pub side: String,
+    #[serde(default, deserialize_with = "deserialize_flex_i64")]
+    pub accumulateQuantity: i64,
+    #[serde(default, deserialize_with = "deserialize_flex_i64")]
+    pub tradeQuantity: i64,
+    #[serde(default, deserialize_with = "deserialize_flex_i64")]
+    pub closedQuantity: i64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub costPrice: f64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub marketPrice: f64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub breakEvenPrice: f64,
+    #[serde(default, deserialize_with = "deserialize_flex_i64")]
+    pub openQuantity: i64,
+    #[serde(default, deserialize_with = "deserialize_flex_i64")]
+    pub overNightQuantity: i64,
+    #[serde(default, deserialize_with = "deserialize_flex_f64")]
+    pub averageClosePrice: f64,
+    pub marketType: String,
+    pub createdDate: Option<String>,
+    pub modifiedDate: Option<String>,
+    #[serde(default)]
+    pub _receivedAt: f64,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -375,6 +404,7 @@ pub struct AccountUpdate {
     pub buyingPower: String,
     pub portfolioValue: Option<String>,
     pub equity: String,
+    pub timestamp: Option<i64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
